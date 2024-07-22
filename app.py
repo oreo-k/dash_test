@@ -5,7 +5,6 @@ import dash_table
 import plotly.express as px
 import pandas as pd
 from datetime import datetime, timedelta
-
 import random
 
 # サンプルデータを20行に拡大し、時間軸を追加
@@ -74,6 +73,8 @@ app.layout = html.Div(children=[
         ],
     ),
 
+    html.Button('Unselect All', id='unselect-all-button', n_clicks=0),
+    html.Button('Select All', id="select-all-button", n_clicks=0),
     html.Button('Filter', id='filter-button', n_clicks=0),
 
     dcc.Graph(
@@ -82,37 +83,53 @@ app.layout = html.Div(children=[
 ])
 
 # コールバックを定義
-
-## table上の行が選択されたとき、選択された行のSelected列を更新
 @app.callback(
-    Output('table_show', 'data'),
-    Input('table_show', 'selected_rows'),
-    State('table_show', 'data')
+    [Output('table_show', 'data'),
+     Output('table_show', 'selected_rows'),
+     Output('filtered-graph', 'figure')],
+    [Input('table_show', 'selected_rows'),
+     Input('unselect-all-button', 'n_clicks'),
+     Input('select-all-button', 'n_clicks'),
+     Input('filter-button', 'n_clicks')],
+    [State('table_show', 'data')]
 )
-def update_selected(selected_rows, rows):
-    for i in range(len(rows)):
-        if i in selected_rows:
-            rows[i]['Selected'] = 'True'
-        else:
+def update_table(selected_rows, unselect_n_clicks, select_n_clicks, filter_n_clicks, rows):
+    ctx = dash.callback_context
+
+    # Determine which input triggered the callback
+    if not ctx.triggered:
+        return rows, dash.no_update, px.scatter()
+
+    input_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if input_id == 'table_show':
+        for i in range(len(rows)):
+            if i in selected_rows:
+                rows[i]['Selected'] = 'True'
+            else:
+                rows[i]['Selected'] = 'False'
+        return rows, selected_rows, dash.no_update
+
+    elif input_id == 'unselect-all-button':
+        for i in range(len(rows)):
             rows[i]['Selected'] = 'False'
-    return rows
+        return rows, [], dash.no_update
 
-## Filterボタンがクリックされたとき、選択された行のデータをグラフに表示
-@app.callback(
-    Output('filtered-graph', 'figure'),
-    Input('filter-button', 'n_clicks'),
-    State('table_show', 'data')
-)
-def update_graph(n_clicks, rows):
-    if n_clicks > 0:
+    elif input_id == 'select-all-button':
+        for i in range(len(rows)):
+            rows[i]['Selected'] = 'True'
+        return rows, list(range(len(rows))), dash.no_update
+
+    elif input_id == 'filter-button':
         filtered_df = pd.DataFrame(rows)
         selected_df = filtered_df[filtered_df['Selected'] == 'True']
         if not selected_df.empty:
             fig = px.scatter(selected_df, x='Time', y='Amount01', color='City', title='Selected Data Over Time')
         else:
             fig = px.scatter(filtered_df, x='Time', y='Amount01', color='City', title='All Data Over Time')
-        return fig
-    return px.scatter(df, x='Time', y='Amount01', color='City', title='All Data Over Time')
+        return rows, dash.no_update, fig
+
+    return rows, dash.no_update, px.scatter()
 
 # サーバーを起動
 if __name__ == '__main__':
