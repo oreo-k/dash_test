@@ -12,8 +12,8 @@ start_date = datetime.now()
 data = {
     "Amount01": [random.randint(1, 10) for _ in range(20)],
     "Amount02": [random.randint(1, 5) for _ in range(20)],
-    "City": ["SF", "SF", "SF", "Montreal", "Montreal", "Montreal", "NYC", "NYC", "NYC", "NYC",
-             "SF", "SF", "SF", "Montreal", "Montreal", "Montreal", "NYC", "NYC", "NYC", "NYC"],
+    "Category": ["A", "A", "A", "B", "B", "B", "C", "C", "C", "C",
+             "A", "A", "A", "B", "B", "B", "C", "C", "C", "C"],
     "Time": [start_date + timedelta(days=i) for i in range(20)]
 }
 
@@ -33,7 +33,7 @@ app.layout = html.Div(children=[
             {'name': 'Selected', 'id': 'Selected', 'type': 'text', 'editable': True},
             {'name': 'Amount01', 'id': 'Amount01'},
             {'name': 'Amount02', 'id': 'Amount02'},
-            {'name': 'City', 'id': 'City'},
+            {'name': 'Category', 'id': 'Category'},
             {'name': 'Time', 'id': 'Time'}
         ],
         data=df.to_dict('records'),
@@ -61,7 +61,7 @@ app.layout = html.Div(children=[
                 'textAlign': 'center'
             },
             {
-                'if': {'column_id': 'City'},
+                'if': {'column_id': 'Category'},
                 'width': '20%',
                 'textAlign': 'center'
             },
@@ -124,9 +124,9 @@ def update_table(selected_rows, unselect_n_clicks, select_n_clicks, filter_n_cli
         filtered_df = pd.DataFrame(rows)
         selected_df = filtered_df[filtered_df['Selected'] == 'True']
         if not selected_df.empty:
-            fig = px.scatter(selected_df, x='Time', y='Amount01', color='City', title='Selected Data Over Time')
+            fig = px.scatter(selected_df, x='Time', y='Amount01', color='Category', title='Selected Data Over Time')
         else:
-            fig = px.scatter(filtered_df, x='Time', y='Amount01', color='City', title='All Data Over Time')
+            fig = px.scatter(filtered_df, x='Time', y='Amount01', color='Category', title='All Data Over Time')
         return rows, dash.no_update, fig
 
     return rows, dash.no_update, px.scatter()
