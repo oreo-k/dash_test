@@ -20,12 +20,24 @@ data = {
 df = pd.DataFrame(data)
 df['Selected'] = 'False'
 
+# 時間軸をUNIXタイムスタンプに変換
+df["Timestamp"]=df["Time"].apply(lambda x: x.timestamp())
+
 # Dashアプリケーションのインスタンスを作成
 app = dash.Dash(__name__)
 
 # アプリケーションのレイアウトを定義
 app.layout = html.Div(children=[
     html.H1(children='Data Table with Scroll and Checkbox Filter'),
+
+    dcc.RangeSlider(
+        id='time-slider',
+        min=df['Timestamp'].min(),
+        max=df['Timestamp'].max() + 1,
+        step=1,
+        marks={i: datetime.fromtimestamp(i).strftime('%Y-%m-%d') for i in range(int(df['Timestamp'].min()), int(df['Timestamp'].max()), 86400)},
+        value=[df['Timestamp'].min(), df['Timestamp'].max()]
+    ),
 
     dash_table.DataTable(
         id='table_show',
@@ -90,10 +102,11 @@ app.layout = html.Div(children=[
     [Input('table_show', 'selected_rows'),
      Input('unselect-all-button', 'n_clicks'),
      Input('select-all-button', 'n_clicks'),
-     Input('filter-button', 'n_clicks')],
-    [State('table_show', 'data')]
+     Input('filter-button', 'n_clicks'),
+     Input('time-slider', 'value')],
+    [State('table_show', 'data'),]
 )
-def update_table(selected_rows, unselect_n_clicks, select_n_clicks, filter_n_clicks, rows):
+def update_table(selected_rows, unselect_n_clicks, select_n_clicks, filter_n_clicks, slider_range, rows):
     ctx = dash.callback_context
 
     # Determine which input triggered the callback
@@ -101,6 +114,9 @@ def update_table(selected_rows, unselect_n_clicks, select_n_clicks, filter_n_cli
         return rows, dash.no_update, px.scatter()
 
     input_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    start_timestamp, end_timestamp = slider_range
+    filtered_df = df[(df['Timestamp'] >= start_timestamp) & (df['Timestamp'] <= end_timestamp)]
 
     if input_id == 'table_show':
         for i in range(len(rows)):
